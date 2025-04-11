@@ -10,6 +10,7 @@ export interface IWorkItem extends Document {
   dateAdded: Date;
   dateCompleted?: Date;
   project: mongoose.Types.ObjectId;
+  workers: mongoose.Types.ObjectId[];
 }
 
 const WorkItemSchema: Schema = new Schema(
@@ -30,7 +31,8 @@ const WorkItemSchema: Schema = new Schema(
     notes: { type: String },
     dateAdded: { type: Date, default: Date.now },
     dateCompleted: { type: Date },
-    project: { type: Schema.Types.ObjectId, ref: 'Project', required: true }
+    project: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
+    workers: { type: [Schema.Types.ObjectId], ref: 'Worker' }
   },
   { timestamps: true }
 );

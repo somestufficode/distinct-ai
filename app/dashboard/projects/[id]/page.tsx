@@ -358,9 +358,9 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
         console.error('API response not OK:', response.status, errorText);
         throw new Error(`Failed to fetch work items: ${response.status} ${errorText}`);
       }
-      const workItems = await response.json();
-      console.log('Received work items:', workItems);
-      setWorkItems(workItems || []);
+      const responseData = await response.json();
+      console.log('Received work items response:', responseData);
+      setWorkItems(responseData.data || []);
     } catch (error) {
       console.error('Error fetching work items:', error);
       setWorkItems([]);

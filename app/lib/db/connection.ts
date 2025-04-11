@@ -1,4 +1,8 @@
 import mongoose from 'mongoose';
+import './models/User';
+import './models/Worker';
+import './models/Project';
+import './models/WorkItem';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -25,7 +29,7 @@ async function dbConnect() {
   if (!cached) {
     throw new Error('Failed to initialize MongoDB connection cache');
   }
-  
+
   if (cached.conn) {
     return cached.conn;
   }

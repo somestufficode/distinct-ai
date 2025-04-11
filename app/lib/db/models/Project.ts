@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { IUser } from './User';
 import { IEvent } from './Event';
+import { IWorker } from './Worker';
+import { IWorkItem } from './WorkItem';
 
 export interface IProject {
   _id: mongoose.Types.ObjectId;
@@ -14,6 +16,8 @@ export interface IProject {
   location: string;
   progress: number;
   events?: IEvent[];
+  workers?: (mongoose.Types.ObjectId | IWorker)[];
+  workItems?: (mongoose.Types.ObjectId | IWorkItem)[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,7 +36,9 @@ const ProjectSchema = new mongoose.Schema<IProject>({
     default: 'planning'
   },
   location: { type: String, required: true },
-  progress: { type: Number }
+  progress: { type: Number },
+  workers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Worker' }],
+  workItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'WorkItem' }]
 }, { timestamps: true });
 
 ProjectSchema.virtual('events', {
