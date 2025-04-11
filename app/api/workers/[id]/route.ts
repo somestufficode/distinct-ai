@@ -1,69 +1,113 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/app/lib/db/connection';
 import { Worker } from '@/app/lib/db/models';
-import { errorResponse, notFoundResponse, successResponse } from '@/app/lib/api-utils';
-import { IEvent } from '@/app/lib/db/models/Event';
+import { Types } from 'mongoose';
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(req: NextRequest, { params }: Params) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
     await dbConnect();
-    const { id } = params;
     
-    const worker = await Worker.findById(id)
-      .populate('user', 'name email')
-      .populate('projects', 'name status');
-    
-    if (!worker) {
-      return notFoundResponse('Worker not found');
+    if (!Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid worker ID' },
+        { status: 400 }
+      );
     }
-    
-    return successResponse(worker);
+
+    const worker = await Worker.findById(id)
+      .populate('projects')
+      .lean();
+
+    if (!worker) {
+      return NextResponse.json(
+        { success: false, error: 'Worker not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: worker });
   } catch (error) {
-    return errorResponse(`Failed to fetch worker ${params.id}`, 500, error);
+    console.error('Error in GET /api/workers/[id]:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(req: NextRequest, { params }: Params) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
     await dbConnect();
-    const { id } = params;
-    const body = await req.json();
+    const body = await request.json();
     
+    if (!Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid worker ID' },
+        { status: 400 }
+      );
+    }
+
     const updatedWorker = await Worker.findByIdAndUpdate(
       id,
       { $set: body },
       { new: true, runValidators: true }
-    );
+    ).populate('projects');
     
     if (!updatedWorker) {
-      return notFoundResponse('Worker not found');
+      return NextResponse.json(
+        { success: false, error: 'Worker not found' },
+        { status: 404 }
+      );
     }
     
-    return successResponse(updatedWorker, 'Worker updated successfully');
+    return NextResponse.json({ success: true, data: updatedWorker });
   } catch (error) {
-    return errorResponse(`Failed to update worker ${params.id}`, 500, error);
+    console.error('Error in PUT /api/workers/[id]:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: Params) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
     await dbConnect();
-    const { id } = params;
     
+    if (!Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid worker ID' },
+        { status: 400 }
+      );
+    }
+
     const deletedWorker = await Worker.findByIdAndDelete(id);
     
     if (!deletedWorker) {
-      return notFoundResponse('Worker not found');
+      return NextResponse.json(
+        { success: false, error: 'Worker not found' },
+        { status: 404 }
+      );
     }
     
-    return successResponse(null, 'Worker deleted successfully');
+    return NextResponse.json({ success: true, message: 'Worker deleted successfully' });
   } catch (error) {
-    return errorResponse(`Failed to delete worker ${params.id}`, 500, error);
+    console.error('Error in DELETE /api/workers/[id]:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 } 

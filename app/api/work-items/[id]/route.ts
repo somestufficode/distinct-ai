@@ -1,66 +1,100 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/app/lib/db/connection';
 import { WorkItem } from '@/app/lib/db/models';
-import { errorResponse, notFoundResponse, successResponse } from '@/app/lib/api-utils';
+import { Types } from 'mongoose';
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(req: NextRequest, { params }: Params) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id: workItemId } = await context.params;
     await dbConnect();
-    const { id } = params;
-    
-    const workItem = await WorkItem.findById(id).populate('project', 'name');
-    
-    if (!workItem) {
-      return notFoundResponse('Work item not found');
+
+    if (!Types.ObjectId.isValid(workItemId)) {
+      return NextResponse.json(
+        { error: 'Invalid work item ID' },
+        { status: 400 }
+      );
     }
-    
-    return successResponse(workItem);
+
+    const workItem = await WorkItem.findById(workItemId)
+      .populate('project')
+      .populate('workers')
+      .lean();
+
+    if (!workItem) {
+      return NextResponse.json(
+        { error: 'Work item not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(workItem);
   } catch (error) {
-    return errorResponse(`Failed to fetch work item ${params.id}`, 500, error);
+    console.error('Error in GET /api/work-items/[id]:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(req: NextRequest, { params }: Params) {
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id: workItemId } = await context.params;
     await dbConnect();
-    const { id } = params;
-    const body = await req.json();
-    
+    const body = await request.json();
+
     const updatedWorkItem = await WorkItem.findByIdAndUpdate(
-      id,
+      workItemId,
       { $set: body },
       { new: true, runValidators: true }
-    ).populate('project', 'name');
-    
+    ).populate(['project', 'workers']);
+
     if (!updatedWorkItem) {
-      return notFoundResponse('Work item not found');
+      return NextResponse.json(
+        { error: 'Work item not found' },
+        { status: 404 }
+      );
     }
-    
-    return successResponse(updatedWorkItem, 'Work item updated successfully');
+
+    return NextResponse.json(updatedWorkItem);
   } catch (error) {
-    return errorResponse(`Failed to update work item ${params.id}`, 500, error);
+    console.error('Error in PUT /api/work-items/[id]:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: Params) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id: workItemId } = await context.params;
     await dbConnect();
-    const { id } = params;
-    
-    const deletedWorkItem = await WorkItem.findByIdAndDelete(id);
-    
+
+    const deletedWorkItem = await WorkItem.findByIdAndDelete(workItemId);
+
     if (!deletedWorkItem) {
-      return notFoundResponse('Work item not found');
+      return NextResponse.json(
+        { error: 'Work item not found' },
+        { status: 404 }
+      );
     }
-    
-    return successResponse(null, 'Work item deleted successfully');
+
+    return NextResponse.json({ message: 'Work item deleted successfully' });
   } catch (error) {
-    return errorResponse(`Failed to delete work item ${params.id}`, 500, error);
+    console.error('Error in DELETE /api/work-items/[id]:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
-} 
+}

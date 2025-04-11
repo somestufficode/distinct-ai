@@ -6,30 +6,28 @@ import { Types } from 'mongoose';
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
-
-    const searchParams = request.nextUrl.searchParams;
+    const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
     const workerId = searchParams.get('workerId');
-
     const query: any = {};
 
     if (projectId) {
-      query.project = new Types.ObjectId(projectId);
+      query.project = projectId;
     }
-
     if (workerId) {
-      query.worker = new Types.ObjectId(workerId);
+      query.workers = workerId;
     }
 
     const workItems = await WorkItem.find(query)
       .populate('project')
-      .sort({ dateAdded: -1 });
+      .populate('workers')
+      .lean();
 
-    return NextResponse.json(workItems);
+    return NextResponse.json({ success: true, data: workItems });
   } catch (error) {
     console.error('Error in GET /api/work-items:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -38,25 +36,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
-
     const body = await request.json();
-
-    if (!body.project || !body.item || !body.type || !body.location) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
+    
     const workItem = await WorkItem.create(body);
-    const populatedWorkItem = await WorkItem.findById(workItem._id)
-      .populate('project');
-
-    return NextResponse.json(populatedWorkItem);
+    const populatedWorkItem = await workItem
+      .populate(['project', 'workers']);
+    
+    return NextResponse.json(
+      { success: true, data: populatedWorkItem },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Error in POST /api/work-items:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

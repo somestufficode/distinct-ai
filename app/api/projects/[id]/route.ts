@@ -19,7 +19,8 @@ export async function GET(
     }
 
     const project = await Project.findById(projectId)
-      .populate('owner')
+      .populate('workers')
+      .populate('workItems')
       .lean();
 
     if (!project) {
@@ -52,7 +53,7 @@ export async function PUT(
       projectId,
       { $set: body },
       { new: true, runValidators: true }
-    ).populate('owner');
+    ).populate(['workers', 'workItems']);
     
     if (!updatedProject) {
       return NextResponse.json(
